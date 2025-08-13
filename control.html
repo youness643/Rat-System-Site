@@ -1,0 +1,451 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAT Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.9);
+            border-bottom: 2px solid #00ff00;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-info {
+            font-size: 18px;
+            color: #ff0000;
+        }
+
+        .status {
+            color: #00ff00;
+            font-size: 14px;
+        }
+
+        .logout-btn {
+            background: #ff0000;
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+
+        .main-content {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #003300, #006600);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(45deg, #004400, #008800);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.danger {
+            background: linear-gradient(45deg, #330000, #660000);
+            border-color: #ff0000;
+            color: #ff0000;
+        }
+
+        .control-btn.danger:hover {
+            background: linear-gradient(45deg, #440000, #880000);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 80%;
+            max-height: 80%;
+            overflow: auto;
+            min-width: 400px;
+        }
+
+        .close-btn {
+            float: right;
+            background: #ff0000;
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .file-explorer {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            padding: 8px;
+            margin: 2px 0;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .file-item:hover {
+            background: rgba(0, 255, 0, 0.2);
+        }
+
+        .remote-desktop {
+            width: 100%;
+            height: 400px;
+            background: #000;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00ff00;
+        }
+
+        .console-output {
+            background: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+
+        .command-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="device-info">
+            Dispositivo: <span id="deviceCode"></span>
+        </div>
+        <div class="status">
+            Status: <span id="connectionStatus">CONNESSO</span>
+        </div>
+        <button class="logout-btn" onclick="logout()">DISCONNETTI</button>
+    </div>
+
+    <div class="main-content">
+        <div class="control-btn danger" onclick="sendCommand('restart')">
+            <div>🔄</div>
+            <div>RIAVVIA</div>
+        </div>
+
+        <div class="control-btn danger" onclick="sendCommand('shutdown')">
+            <div>⚡</div>
+            <div>SPEGNI</div>
+        </div>
+
+        <div class="control-btn danger" onclick="sendCommand('force_shutdown')">
+            <div>💀</div>
+            <div>SPEGNIMENTO FORZATO</div>
+        </div>
+
+        <div class="control-btn" onclick="openFileExplorer()">
+            <div>📁</div>
+            <div>FILE</div>
+        </div>
+
+        <div class="control-btn" onclick="openRemoteDesktop()">
+            <div>🖥️</div>
+            <div>ANYDESK</div>
+        </div>
+
+        <div class="control-btn" onclick="getSystemInfo()">
+            <div>ℹ️</div>
+            <div>INFO SISTEMA</div>
+        </div>
+
+        <div class="control-btn" onclick="openConsole()">
+            <div>⌨️</div>
+            <div>CONSOLE</div>
+        </div>
+
+        <div class="control-btn" onclick="getProcessList()">
+            <div>📋</div>
+            <div>PROCESSI</div>
+        </div>
+    </div>
+
+    <!-- File Explorer Modal -->
+    <div id="fileModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('fileModal')">×</button>
+            <h3>Esplora File</h3>
+            <div style="margin: 10px 0;">
+                <input type="text" id="currentPath" placeholder="Percorso corrente" style="width: 70%; padding: 5px; background: #000; color: #00ff00; border: 1px solid #00ff00;">
+                <button onclick="navigateToPath()" style="padding: 5px 10px; background: #006600; color: white; border: none;">VAI</button>
+            </div>
+            <div class="file-explorer" id="fileList">
+                <div class="file-item">
+                    <span>📁 Documents</span>
+                    <span>Directory</span>
+                </div>
+                <div class="file-item">
+                    <span>📄 file.txt</span>
+                    <span>1.2 KB</span>
+                </div>
+            </div>
+            <div style="margin-top: 10px;">
+                <input type="file" id="uploadFile" style="color: #00ff00;">
+                <button onclick="uploadFile()" style="padding: 5px 10px; background: #006600; color: white; border: none; margin-left: 10px;">CARICA</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remote Desktop Modal -->
+    <div id="desktopModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; max-height: 90%;">
+            <button class="close-btn" onclick="closeModal('desktopModal')">×</button>
+            <h3>Controllo Remoto Desktop</h3>
+            <div class="remote-desktop">
+                <div>
+                    <div>🖥️ SCHERMO REMOTO</div>
+                    <div style="margin-top: 10px; font-size: 12px; opacity: 0.7;">
+                        Connessione desktop in corso...
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 10px; text-align: center;">
+                <button onclick="takeScreenshot()" style="padding: 8px 15px; background: #006600; color: white; border: none; margin: 5px;">SCREENSHOT</button>
+                <button onclick="toggleRemoteControl()" style="padding: 8px 15px; background: #006600; color: white; border: none; margin: 5px;">CONTROLLO REMOTO</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Console Modal -->
+    <div id="consoleModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('consoleModal')">×</button>
+            <h3>Console Remota</h3>
+            <div class="console-output" id="consoleOutput">
+Sistema connesso. Digitare comandi...
+> 
+            </div>
+            <input type="text" class="command-input" id="commandInput" placeholder="Inserisci comando..." onkeypress="handleCommandInput(event)">
+        </div>
+    </div>
+
+    <script>
+        const currentDevice = localStorage.getItem('currentDevice');
+        
+        if (!currentDevice) {
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('deviceCode').textContent = currentDevice;
+        }
+
+        function sendCommand(command) {
+            const commands = {
+                'restart': `!restart ${currentDevice}`,
+                'shutdown': `!kill ${currentDevice}`,
+                'force_shutdown': `!poweroff ${currentDevice}`
+            };
+
+            // Here you would send the command to the webhook or backend
+            console.log(`Sending command: ${commands[command]}`);
+            
+            // Simulate command execution
+            updateStatus(`Comando ${command} inviato...`);
+            
+            setTimeout(() => {
+                updateStatus('CONNESSO');
+            }, 3000);
+        }
+
+        function updateStatus(status) {
+            document.getElementById('connectionStatus').textContent = status;
+        }
+
+        function openFileExplorer() {
+            document.getElementById('fileModal').style.display = 'block';
+            loadFileList();
+        }
+
+        function openRemoteDesktop() {
+            document.getElementById('desktopModal').style.display = 'block';
+            initializeRemoteDesktop();
+        }
+
+        function openConsole() {
+            document.getElementById('consoleModal').style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function loadFileList() {
+            // Simulate file listing
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = `
+                <div class="file-item" onclick="navigateToFolder('..')">
+                    <span>📁 ..</span>
+                    <span>Parent Directory</span>
+                </div>
+                <div class="file-item" onclick="navigateToFolder('Documents')">
+                    <span>📁 Documents</span>
+                    <span>Directory</span>
+                </div>
+                <div class="file-item" onclick="downloadFile('system.log')">
+                    <span>📄 system.log</span>
+                    <span>2.5 KB</span>
+                </div>
+                <div class="file-item" onclick="downloadFile('config.txt')">
+                    <span>📄 config.txt</span>
+                    <span>1.1 KB</span>
+                </div>
+            `;
+        }
+
+        function navigateToFolder(folder) {
+            console.log(`Navigating to: ${folder}`);
+            // Send navigation command to target PC
+            loadFileList(); // Reload file list
+        }
+
+        function downloadFile(filename) {
+            console.log(`Downloading: ${filename}`);
+            // Implement file download functionality
+        }
+
+        function uploadFile() {
+            const fileInput = document.getElementById('uploadFile');
+            if (fileInput.files.length > 0) {
+                console.log(`Uploading: ${fileInput.files[0].name}`);
+                // Implement file upload functionality
+            }
+        }
+
+        function initializeRemoteDesktop() {
+            // Initialize remote desktop connection
+            console.log('Initializing remote desktop...');
+        }
+
+        function takeScreenshot() {
+            console.log(`Taking screenshot of ${currentDevice}`);
+            // Send screenshot command
+        }
+
+        function toggleRemoteControl() {
+            console.log('Toggling remote control');
+            // Toggle remote control functionality
+        }
+
+        function getSystemInfo() {
+            console.log(`Getting system info for ${currentDevice}`);
+            // Send system info command
+        }
+
+        function getProcessList() {
+            console.log(`Getting process list for ${currentDevice}`);
+            // Send process list command
+        }
+
+        function handleCommandInput(event) {
+            if (event.key === 'Enter') {
+                const command = event.target.value;
+                const output = document.getElementById('consoleOutput');
+                
+                output.textContent += `\n> ${command}\n`;
+                
+                // Send command to target PC
+                console.log(`Executing command: ${command}`);
+                
+                // Simulate response
+                setTimeout(() => {
+                    output.textContent += `Command executed on ${currentDevice}\n> `;
+                    output.scrollTop = output.scrollHeight;
+                }, 1000);
+                
+                event.target.value = '';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('currentDevice');
+            window.location.href = 'index.html';
+        }
+
+        // Auto-refresh connection status
+        setInterval(() => {
+            // Check connection status with target device
+            // This would normally ping the device or check last heartbeat
+        }, 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAT System Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 24px;
+            color: #ff0000;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #00ff00;
+            opacity: 0.8;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00ff00;
+            font-size: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            color: #00ff00;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #ff0000, #cc0000);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: linear-gradient(45deg, #cc0000, #990000);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+
+        .status.success {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+
+        .status.error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #00ff00;
+            margin-top: 15px;
+        }
+
+        .loading::after {
+            content: '';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: '....'; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">RAT SYSTEM</h1>
+            <p class="subtitle">Remote Access Terminal</p>
+        </div>
+
+        <form id="accessForm">
+            <div class="input-group">
+                <label for="deviceCode">Codice Dispositivo:</label>
+                <input type="text" id="deviceCode" name="deviceCode" placeholder="Inserisci il codice (es: PC423467)" required>
+            </div>
+            <button type="submit" class="btn">Accedi al Sistema</button>
+        </form>
+
+        <div class="loading" id="loading">Verificando il codice</div>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        document.getElementById('accessForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const deviceCode = document.getElementById('deviceCode').value.trim();
+            const loadingEl = document.getElementById('loading');
+            const statusEl = document.getElementById('status');
+            
+            if (!deviceCode) {
+                showStatus('Inserisci un codice dispositivo valido', 'error');
+                return;
+            }
+
+            loadingEl.style.display = 'block';
+            statusEl.style.display = 'none';
+
+            try {
+                // Check if device is registered and online
+                const response = await fetch(`/api/device-status/${deviceCode}`);
+                const data = await response.json();
+
+                loadingEl.style.display = 'none';
+
+                if (data.found && data.status === 'online') {
+                    showStatus('Codice valido! Reindirizzamento...', 'success');
+                    setTimeout(() => {
+                        window.location.href = `/control?device=${deviceCode}`;
+                    }, 1500);
+                } else if (data.found && data.status === 'offline') {
+                    showStatus('Dispositivo offline. Riprova più tardi.', 'error');
+                } else {
+                    showStatus('Codice dispositivo non valido o non registrato', 'error');
+                }
+            } catch (error) {
+                loadingEl.style.display = 'none';
+                showStatus('Errore di connessione. Riprova.', 'error');
+            }
+        });
+
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        // Check for new registrations every 5 seconds
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/check-registrations');
+                const data = await response.json();
+                console.log('Dispositivi registrati:', data.newCodes);
+            } catch (error) {
+                console.log('Errore nel controllo registrazioni');
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
